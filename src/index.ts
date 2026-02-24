@@ -26,6 +26,17 @@ const app = express();
 const port =
   process.env.PORT || (process.env.NODE_ENV !== "development" ? 80 : 3002); // default port to listen
 
+const allowedOrigins = (process.env.CORS_ORIGIN || "")
+  .split(",")
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+const isAllowedOrigin = (origin?: string) => {
+  if (!origin) return true; // non-browser/server-side clients
+  if (allowedOrigins.length === 0) return true;
+  return allowedOrigins.includes(origin);
+};
+
 app.use(express.static("public"));
 
 app.get("/", (req, res) => {
@@ -43,7 +54,13 @@ try {
     transports: ["websocket", "polling"],
     cors: {
       allowedHeaders: ["Content-Type", "Authorization"],
-      origin: process.env.CORS_ORIGIN || "*",
+      origin: (origin, callback) => {
+        if (isAllowedOrigin(origin)) {
+          callback(null, true);
+          return;
+        }
+        callback(new Error(`CORS blocked for origin: ${origin}`));
+      },
       credentials: true,
     },
     allowEIO3: true,
